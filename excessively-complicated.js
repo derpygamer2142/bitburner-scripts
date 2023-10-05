@@ -1,36 +1,35 @@
 /** @param {NS} ns */
 export async function main(ns) {
 
-  function all_nodes_from(server, ignore) {
-    if (!(ignore.includes(server))) {
-
-      let nodes = ns.scan(server);
-      nodes = nodes.filter((s) => !(ignore.includes(s)));
-      let to_add = [];
-
-
-      nodes.forEach(s => {
+  function all_nodes() {
+    let ignore = ["home"];
+    let to_check = [];
+    let servers = [];
+    let s = ""
+    let i = 0
+    to_check = ns.scan("home");
 
 
-
+    while (i <= to_check.length) {
+      s = to_check[i];
+      if (!(ignore.includes(s))) {
+        servers.push(s);
         ignore.push(s);
-        to_add.push(s);
-        let e = all_nodes_from(s, ignore);
-
-        if (!(e == undefined)) {
-
-          to_add.push(e[0].flat(Infinity));
-          ignore.push(e[1].flat(Infinity));
-        }
-          
-
-      });
-
-
-      // ns.print(`Node ${server} complete.`);
-      return [nodes.concat(to_add).flat(Infinity), ignore];
+        to_check = to_check.concat(ns.scan(s));
+        to_check = to_check.filter(e => !(ignore.includes(e)));
+        ns.print(ignore)
+      }
+      else {
+        ns.print(`${s} is ignored`)
+      }
+      i++
     }
+
+    return servers;
   }
 
-  ns.print(all_nodes_from("home", []));
+  ns.print(all_nodes());
+
+
+
 }
