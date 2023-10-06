@@ -49,6 +49,7 @@ export async function main(ns) {
     let servers = {};
 
     seen.forEach(s => {
+      ns.killall(s);
       servers[s] = {};
       servers[s].rootAccess = ns.hasRootAccess(s);
       servers[s].availableMoney = ns.getServerMoneyAvailable(s);
