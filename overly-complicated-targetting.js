@@ -2,11 +2,12 @@
 export async function main(ns) {
   ns.disableLog("ALL")
   await ns.sleep(5000)
-  let ram = 64; // $3,520,000 
+  /*
+  let ram = 16; // 64 = $3,520,000, 16 = $880000
   let purchasedServers = ns.getPurchasedServers();
   let maxServers = ns.getPurchasedServerLimit();
   let serverCost = ns.getPurchasedServerCost(ram);
-  /*
+  
   if (purchasedServers < maxServers) {
     while ((purchasedServers < maxServers)) {
       if (ns.getServerMoneyAvailable("home") >= serverCost) {
@@ -114,12 +115,6 @@ export async function main(ns) {
 
 
 
-
-
-
-
-
-
   let parentChildren = nodes.parentChildren
   const script = "first.js";
   let maxServersRunning = 50; // to keep the game from crashing. Set to Infinity for unlimited.
@@ -127,8 +122,33 @@ export async function main(ns) {
   ns.print(`Got all nodes. Servers to run: ${serverList.length}`);
   await ns.sleep(5000);
 
+  let ram = 16; // 64 = $3,520,000, 16 = $880000
+  let purchasedServers = ns.getPurchasedServers();
+  let maxServers = ns.getPurchasedServerLimit();
+  let serverCost = ns.getPurchasedServerCost(ram);
+  
+  if (purchasedServers < maxServers) {
+    while ((purchasedServers < maxServers)) {
+      if (ns.getServerMoneyAvailable("home") >= serverCost) {
+        await ns.purchaseServer("purchasedServer",ram);
+        ns.print(`Purchased server ${ns.getPurchasedServers().length}`)
+        purchasedServers = ns.getPurchasedServers()
+      }
+      else {
+        ns.print("Not enough money to buy a server")
+      }
+      await ns.sleep(2000);
+    }
+  }
 
-  for (let i = 0; i <= serverList.length; i++) {
+  purchasedServers.forEach((s) => {
+    ns.killall(s);
+    ns.scp(script,s);
+    let threads = Math.floor((ns.getServerMaxRam(s)-ns.getServerUsedRam(s))/ns.getScriptRam(script));
+    ns.exec(script,s,threads,target);
+  });
+
+  for (let i = 0; i < serverList.length; i++) {
     if (maxServersRunning)
     if (i > maxServersRunning) {
       ns.print(`Reached max server limit at ${i}`);
@@ -151,14 +171,13 @@ export async function main(ns) {
 
     // I don't think this is needed, but in case it is I'm keeping it
     */
+
+
+
     await ns.killall(s);
     await ns.scp(script,s);
     let threads = Math.floor((targetServer.maxRam-targetServer.usedRam)/ns.getScriptRam(script));
-    if (targetServer.rootAccess) {
-      ns.print(`Already have root access, running on server ${s}, server #${i}`)
-      await ns.exec(script,s,threads,target);
-    }
-    else {
+    if (!targetServer.rootAccess) {
       let numports = targetServer.numPorts
 
       if (numports > 0) {
@@ -224,24 +243,24 @@ export async function main(ns) {
 
 
       await ns.nuke(s);
-      if (targetServer.maxRam > 2 && ns.hasRootAccess(s)) {
-        if (threads > 0 && targetServer.maxRam > 2) {
-          try {
-          ns.print(`Threads: ${threads} on server ${s} #${i}`)
-          ns.exec(script,s,threads,[target]);
-          }
-          catch {
-            ns.print(`Threw an error on server ${s}`);
-            maxServersRunning += 1;
-          }
+    }
+    if (targetServer.maxRam > 2 && ns.hasRootAccess(s)) {
+      if (threads > 0 && targetServer.maxRam > 2) {
+        try {
+        ns.print(`Threads: ${threads} on server ${s} #${i}`)
+        ns.exec(script,s,threads,target);
+        }
+        catch (error){
+          ns.print(`Threw an error on server ${s}: ${error}`);
+          maxServersRunning += 1;
         }
       }
-      else {
-        maxServersRunning += 1;
-      }
-      ns.print(`Cracked server ${s}, server #${i}`);
-      await ns.sleep(1000);
     }
+    else {
+      maxServersRunning += 1;
+    }
+    ns.print(`Cracked server ${s}, server #${i}`);
+    await ns.sleep(1000);
   }
 
 
