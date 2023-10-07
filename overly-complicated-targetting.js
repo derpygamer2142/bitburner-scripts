@@ -1,6 +1,25 @@
 /** @param {NS} ns */
 export async function main(ns) {
   ns.disableLog("ALL")
+  await ns.sleep(5000)
+  let ram = 64; // $3,520,000 
+  let purchasedServers = ns.getPurchasedServers();
+  let maxServers = ns.getPurchasedServerLimit();
+  let serverCost = ns.getPurchasedServerCost(ram);
+  /*
+  if (purchasedServers < maxServers) {
+    while ((purchasedServers < maxServers)) {
+      if (ns.getServerMoneyAvailable("home") >= serverCost) {
+        await ns.purchaseServer("purchasedServer",ram);
+        ns.print(`Purchased server ${ns.getPurchasedServers().length}`)
+      }
+      else {
+        ns.print("Not enough money to buy a server")
+      }
+      await ns.sleep(2000);
+    }
+  }
+  */
 
   function removeItemFromList(item,list) {
     // from https://www.freecodecamp.org/news/how-to-remove-an-element-from-a-javascript-array-removing-a-specific-item-in-js/
@@ -31,17 +50,6 @@ export async function main(ns) {
       unseen = removeItemFromList(i,unseen); // remove it from the list
       i -= 1; // adjust accordingly
     }
-    let ram = 64; // $3,520,000
-    let purchasedServers = ns.getPurchasedServers();
-    let maxServers = ns.getPurchasedServerLimit();
-    let serverCost = ns.getPurchasedServerCost(ram);
-    if (purchasedServers < maxServers) {
-      while ((purchasedServers < maxServers)) {
-        if (ns.getServerMoneyAvailable("home") >= serverCost) {
-          ns.purchaseServer("purchasedServer",ram);
-        }
-      }
-    }
 
 
     seen = removeItemFromList(0,seen); // remove "home" so no one accidentally hacks it
@@ -63,6 +71,7 @@ export async function main(ns) {
       servers[s].files = ns.ls(s);
       servers[s].processes = ns.ps(s);
       servers[s].parent = parentChild[s].parent;
+      servers[s].name = s;
     }); // thicc
 
 
@@ -72,18 +81,61 @@ export async function main(ns) {
     toReturn.parentChildren = parentChild;
     return toReturn;
   }
+  function getKeyByValue(object, value) {
+  // from https://stackoverflow.com/questions/9907419/how-to-get-a-key-in-a-javascript-object-by-its-value
+  return Object.keys(object).find(key => object[key] === value);
+  }
+
+  
 
 
-  let nodes = all_nodes();
+
+
+
+
+
+
+
+
+  //await ns.sleep(4500);
+  ns.print("init");
+  let nodes = await all_nodes();
   let serverList = nodes.servers;
   let serverData = nodes.serverData;
+  let serverDataCopy = serverData;
+  let hackFiles = ["NUKE.exe","BruteSSH.exe","FTPCrack.exe","relaySMTP.exe","HTTPWorm.exe","SQLInject.exe"]
+  //ns.print(JSON.stringify(serverDataCopy))
+  let target = Object.values(serverDataCopy).filter((obj)=> obj.minHackLevel <= Math.ceil(ns.getHackingLevel()/2)).filter((s) => (ns.fileExists(hackFiles[s.numPorts]))).reduce((high,curr) => high.maxMoney > curr.maxMoney? high : curr).name
+  ns.print(`Target: ${target}`)
+
+
+
+
+
+
+
+
+
+
+
+
+
   let parentChildren = nodes.parentChildren
-  const script = "hackServer.js";
-  const test = true;
+  const script = "first.js";
+  let maxServersRunning = 50; // to keep the game from crashing. Set to Infinity for unlimited.
+
+  ns.print(`Got all nodes. Servers to run: ${serverList.length}`);
+  await ns.sleep(5000);
+
 
   for (let i = 0; i <= serverList.length; i++) {
-    s = serverList[i];
-    targetServer = serverData[s];
+    if (maxServersRunning)
+    if (i > maxServersRunning) {
+      ns.print(`Reached max server limit at ${i}`);
+      break;
+    }
+    let s = serverList[i];
+    let targetServer = serverData[s];
     /*
     let checkingParent = s;
     let path = [s];
@@ -99,28 +151,36 @@ export async function main(ns) {
 
     // I don't think this is needed, but in case it is I'm keeping it
     */
-    ns.killall(s);
-    ns.scp(script,s);
+    await ns.killall(s);
+    await ns.scp(script,s);
+    let threads = Math.floor((targetServer.maxRam-targetServer.usedRam)/ns.getScriptRam(script));
     if (targetServer.rootAccess) {
-      exec(script,s,Math.floor((targetServer.maxRam-targetServer.usedRam)/ns.getScriptRam(script)));
+      ns.print(`Already have root access, running on server ${s}, server #${i}`)
+      await ns.exec(script,s,threads,target);
     }
     else {
       let numports = targetServer.numPorts
+
       if (numports > 0) {
         if (ns.fileExists("BruteSSH.exe")) {
-          ns.brutessh(s);
+          await ns.brutessh(s);
         }
         else {
+          ns.print("Skipping BruteSSH");
+          maxServersRunning += 1;
           continue;
+          
         }
       }
       //brute ssh
 
       if (numports > 1) {
         if (ns.fileExists("FTPCrack.exe")) {
-          ns.ftpcrack(s);
+          await ns.ftpcrack(s);
         }
         else {
+          ns.print("Skipping FTPCrack");
+          maxServersRunning += 1;
           continue;
         }
       }
@@ -128,9 +188,11 @@ export async function main(ns) {
       
       if (numports > 2) {
         if (ns.fileExists("relaySMTP.exe")) {
-          ns.relaysmtp(s);
+          await ns.relaysmtp(s);
         }
         else {
+          ns.print("Skipping relaySMTP");
+          maxServersRunning += 1;
           continue;
         }
       }
@@ -138,9 +200,11 @@ export async function main(ns) {
 
       if (numports > 3) {
         if (ns.fileExists("HTTPWorm.exe")) {
-          ns.httpworm(s);
+          await ns.httpworm(s);
         }
         else {
+          ns.print("Skipping HTTPWorm");
+          maxServersRunning += 1;
           continue;
         }
       }
@@ -148,17 +212,35 @@ export async function main(ns) {
 
       if (numports > 4) {
         if (ns.fileExists("SQLInject.exe")) {
-          ns.sqlinject(s);
+          await ns.sqlinject(s);
         }
         else {
+          ns.print("Skipping SQLInject");
+          maxServersRunning += 1;
           continue;
         }
       }
       // sql inject
 
 
-      ns.exec("NUKE.exe",s);
-      exec(script,s,Math.floor((targetServer.maxRam-targetServer.usedRam)/ns.getScriptRam(script)));
+      await ns.nuke(s);
+      if (targetServer.maxRam > 2 && ns.hasRootAccess(s)) {
+        if (threads > 0 && targetServer.maxRam > 2) {
+          try {
+          ns.print(`Threads: ${threads} on server ${s} #${i}`)
+          ns.exec(script,s,threads,[target]);
+          }
+          catch {
+            ns.print(`Threw an error on server ${s}`);
+            maxServersRunning += 1;
+          }
+        }
+      }
+      else {
+        maxServersRunning += 1;
+      }
+      ns.print(`Cracked server ${s}, server #${i}`);
+      await ns.sleep(1000);
     }
   }
 
