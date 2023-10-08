@@ -117,8 +117,8 @@ export async function main(ns) {
 
   let parentChildren = nodes.parentChildren
   const script = "first.js";
-  let maxServersRunning = 50; // to keep the game from crashing. Set to Infinity for unlimited.
-
+  let maxServersRunning = Infinity;
+  
   ns.print(`Got all nodes. Servers to run: ${serverList.length}`);
   await ns.sleep(5000);
 
