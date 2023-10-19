@@ -1,27 +1,10 @@
 /** @param {NS} ns */
 export async function main(ns) {
+  const script = "first.js";
   ns.disableLog("ALL")
+  ns.scriptKill(script,"home")
   await ns.sleep(5000)
-  /*
-  let ram = 16; // 64 = $3,520,000, 16 = $880000
-  let purchasedServers = ns.getPurchasedServers();
-  let maxServers = ns.getPurchasedServerLimit();
-  let serverCost = ns.getPurchasedServerCost(ram);
   
-  if (purchasedServers < maxServers) {
-    while ((purchasedServers < maxServers)) {
-      if (ns.getServerMoneyAvailable("home") >= serverCost) {
-        await ns.purchaseServer("purchasedServer",ram);
-        ns.print(`Purchased server ${ns.getPurchasedServers().length}`)
-      }
-      else {
-        ns.print("Not enough money to buy a server")
-      }
-      await ns.sleep(2000);
-    }
-  }
-  */
-
   function removeItemFromList(item,list) {
     // from https://www.freecodecamp.org/news/how-to-remove-an-element-from-a-javascript-array-removing-a-specific-item-in-js/
     return list.slice(0, item).concat(list.slice(item+1));
@@ -83,11 +66,64 @@ export async function main(ns) {
     return toReturn;
   }
   function getKeyByValue(object, value) {
-  // from https://stackoverflow.com/questions/9907419/how-to-get-a-key-in-a-javascript-object-by-its-value
+  // from https://stackoverflow.com/questions/9907419/how-to-get-a-key-in-a-javascript-object-by-its-value . This code is unused but idk i might need it
   return Object.keys(object).find(key => object[key] === value);
   }
 
   
+  function crack(target,serverData) {
+    
+  let numports = serverData[target].numPorts
+
+      if (numports > 0) {
+        if (ns.fileExists("BruteSSH.exe")) {
+          ns.brutessh(target);
+        }
+        else {
+          ns.print("Skipping BruteSSH");
+        }
+      }
+      //brute ssh
+
+      if (numports > 1) {
+        if (ns.fileExists("FTPCrack.exe")) {
+          ns.ftpcrack(target);
+        }
+        else {
+          ns.print("Skipping FTPCrack");
+        }
+      }
+      // ftp crack
+      
+      if (numports > 2) {
+        if (ns.fileExists("relaySMTP.exe")) {
+          ns.relaysmtp(target);
+        }
+        else {
+          ns.print("Skipping relaySMTP");
+        }
+      }
+      // relay smtp
+
+      if (numports > 3) {
+        if (ns.fileExists("HTTPWorm.exe")) {
+          ns.httpworm(target);
+        }
+        else {
+          ns.print("Skipping HTTPWorm");
+        }
+      }
+      // http worm
+
+      if (numports > 4) {
+        if (ns.fileExists("SQLInject.exe")) {
+          ns.sqlinject(target);
+        }
+        else {
+          ns.print("Skipping SQLInject");
+        }
+      }
+  }
 
 
 
@@ -106,40 +142,20 @@ export async function main(ns) {
   let serverDataCopy = serverData;
   let hackFiles = ["NUKE.exe","BruteSSH.exe","FTPCrack.exe","relaySMTP.exe","HTTPWorm.exe","SQLInject.exe"]
   //ns.print(JSON.stringify(serverDataCopy))
-  let target = Object.values(serverDataCopy).filter((obj)=> obj.minHackLevel <= Math.ceil(ns.getHackingLevel()/2)).filter((s) => (ns.fileExists(hackFiles[s.numPorts]))).reduce((high,curr) => high.maxMoney > curr.maxMoney? high : curr).name
+  let target = Object.values(serverDataCopy).filter((obj)=> obj.minHackLevel <= Math.ceil(ns.getHackingLevel()/2)).filter((s) => (ns.fileExists(hackFiles[s.numPorts]))).reduce((high,curr) => high.maxMoney > curr.maxMoney? high : curr).name // somebody whose name i forgot wrote most of this line, sorry I forgot your name but you're cool
   ns.print(`Target: ${target}`)
 
+  crack(target,serverData); // do the funni
 
 
-
-
-
-
+  let purchasedServers = ns.getPurchasedServers();
   let parentChildren = nodes.parentChildren
-  const script = "first.js";
   let maxServersRunning = Infinity;
   
   ns.print(`Got all nodes. Servers to run: ${serverList.length}`);
   await ns.sleep(5000);
 
-  let ram = 16; // 64 = $3,520,000, 16 = $880000
-  let purchasedServers = ns.getPurchasedServers();
-  let maxServers = ns.getPurchasedServerLimit();
-  let serverCost = ns.getPurchasedServerCost(ram);
-  
-  if (purchasedServers < maxServers) {
-    while ((purchasedServers < maxServers)) {
-      if (ns.getServerMoneyAvailable("home") >= serverCost) {
-        await ns.purchaseServer("purchasedServer",ram);
-        ns.print(`Purchased server ${ns.getPurchasedServers().length}`)
-        purchasedServers = ns.getPurchasedServers()
-      }
-      else {
-        ns.print("Not enough money to buy a server")
-      }
-      await ns.sleep(2000);
-    }
-  }
+
 
   purchasedServers.forEach((s) => {
     ns.killall(s);
@@ -260,9 +276,11 @@ export async function main(ns) {
       maxServersRunning += 1;
     }
     ns.print(`Cracked server ${s}, server #${i}`);
-    await ns.sleep(1000);
+    await ns.sleep(200);
   }
 
+
+  ns.spawn(script,Math.floor(((ns.getServerMaxRam("home")-ns.getServerUsedRam("home"))*0.95)/ns.getScriptRam(script)),target)
 
 
 }
